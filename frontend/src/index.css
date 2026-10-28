@@ -12,6 +12,8 @@
 
 body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--text); background: #fff; }
 .text-muted { color: var(--muted) !important; }
+.text-indigo { color: var(--indigo) !important; }
+.bg-indigo-subtle { background-color: #e0e7ff !important; color: var(--indigo-dark) !important; }
 a { color: var(--indigo); }
 :focus-visible { outline: 3px solid rgba(79, 70, 229, 0.45); outline-offset: 2px; }
 
@@ -53,7 +55,8 @@ a { color: var(--indigo); }
 .soft-bg { background: var(--soft); }
 .benefit-card { background: #fff; border: 1px solid var(--border); border-radius: 1.25rem; padding: 1.75rem; box-shadow: var(--shadow); }
 .benefit-icon { width: 48px; height: 48px; border-radius: 0.9rem; background: #e0e7ff; color: var(--indigo); display: flex; align-items: center; justify-content: center; font-size: 1.4rem; margin-bottom: 1rem; }
-.job-card { border: 1px solid var(--border); border-radius: 1.1rem; box-shadow: var(--shadow); }
+.job-card { border: 1px solid var(--border); border-radius: 1.1rem; box-shadow: var(--shadow); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.job-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(15, 27, 61, 0.12); }
 .logo-badge { width: 44px; height: 44px; border-radius: 0.8rem; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .logo-lg { width: 60px; height: 60px; font-size: 1.5rem; }
 .pill { display: inline-block; background: var(--soft); color: var(--text); border-radius: 999px; padding: 0.25rem 0.8rem; font-size: 0.8rem; font-weight: 600; }
@@ -79,5 +82,8 @@ a { color: var(--indigo); }
 .cl-footer a:hover { color: #fff; }
 .footer-text { color: #aab4d8; }
 .footer-line { border-color: rgba(255, 255, 255, 0.15); }
+
+/* Modal and feedback */
+.modal.show { backdrop-filter: blur(4px); }
 
 @media (max-width: 575px) { .display-4 { font-size: 2.2rem; } }

@@ -1,20 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import JobCard from "../components/JobCard.jsx";
-import { jobs } from "../data/jobs.js";
+import { useJobs } from "../context/JobContext.jsx";
 
-const popular = ["React", "Data", "Design", "Marketing"];
+const popular = ["React", "Data", "Design", "Marketing", "Node.js", "Python"];
 
 export default function Home() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const { jobs } = useJobs();
+
   const featured = jobs.filter((j) => j.featured);
   const companies = new Set(jobs.map((j) => j.company)).size;
   const internships = jobs.filter((j) => j.type === "Internship").length;
+  const locationsCount = new Set(jobs.map((j) => j.location)).size;
 
   const handleSearch = (e) => {
     e.preventDefault();
-    navigate(`/jobs?q=${encodeURIComponent(query.trim())}`);
+    if (query.trim()) {
+      navigate(`/jobs?q=${encodeURIComponent(query.trim())}`);
+    } else {
+      navigate("/jobs");
+    }
   };
 
   return (
@@ -26,14 +33,14 @@ export default function Home() {
             <div className="col-lg-7">
               <h1 className="display-4 fw-bold mb-3">Find the internship that starts your career.</h1>
               <p className="lead hero-text mb-4">
-                Browse internships and entry-level jobs from companies that hire students and freshers.
+                Browse verified internships and entry-level jobs from companies that hire college students and freshers.
               </p>
               <form className="cl-search d-flex" onSubmit={handleSearch}>
                 <i className="bi bi-search search-icon"></i>
                 <input
                   type="text"
                   className="form-control border-0 shadow-none"
-                  placeholder="Job title, skill or company"
+                  placeholder="Job title, skill or company..."
                   aria-label="Search jobs"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -43,23 +50,36 @@ export default function Home() {
               <div className="mt-3 hero-text small">
                 Popular searches:{" "}
                 {popular.map((p) => (
-                  <Link key={p} to={`/jobs?q=${p}`} className="chip">{p}</Link>
+                  <Link key={p} to={`/jobs?q=${encodeURIComponent(p)}`} className="chip">
+                    {p}
+                  </Link>
                 ))}
               </div>
               <div className="d-flex flex-wrap gap-3 mt-4">
-                <Link to="/jobs" className="btn btn-light btn-lg rounded-pill px-4 fw-semibold">Browse all jobs</Link>
-                <Link to="/signup" className="btn btn-outline-light btn-lg rounded-pill px-4">Create free account</Link>
+                <Link to="/jobs" className="btn btn-light btn-lg rounded-pill px-4 fw-semibold">
+                  Browse all jobs
+                </Link>
+                <Link to="/dashboard" className="btn btn-outline-light btn-lg rounded-pill px-4">
+                  <i className="bi bi-speedometer2 me-1"></i> Student Dashboard
+                </Link>
               </div>
             </div>
             <div className="col-lg-5">
               <div className="fresh-panel">
-                <h6 className="fw-bold mb-3">Fresh this week</h6>
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h6 className="fw-bold mb-0">Fresh this week</h6>
+                  <span className="badge bg-light text-secondary border">Verified</span>
+                </div>
                 {jobs.slice(0, 3).map((j) => (
                   <Link to={`/jobs/${j.id}`} key={j.id} className="fresh-item">
-                    <div className="logo-badge me-3" style={{ background: j.color }}>{j.company.charAt(0)}</div>
+                    <div className="logo-badge me-3" style={{ background: j.color }}>
+                      {j.company.charAt(0)}
+                    </div>
                     <div className="flex-grow-1">
                       <div className="fw-semibold small">{j.title}</div>
-                      <div className="text-muted small">{j.company}, {j.location}</div>
+                      <div className="text-muted small">
+                        {j.company} &bull; {j.location}
+                      </div>
                     </div>
                     <i className="bi bi-chevron-right text-muted"></i>
                   </Link>
@@ -73,26 +93,40 @@ export default function Home() {
       {/* Stats */}
       <section className="container stats-strip">
         <div className="row g-3 text-center">
-          <div className="col-6 col-md-3"><div className="stat-num">{jobs.length}</div><div className="text-muted small">Open roles</div></div>
-          <div className="col-6 col-md-3"><div className="stat-num">{companies}</div><div className="text-muted small">Hiring companies</div></div>
-          <div className="col-6 col-md-3"><div className="stat-num">{internships}</div><div className="text-muted small">Internships</div></div>
-          <div className="col-6 col-md-3"><div className="stat-num">5</div><div className="text-muted small">Cities and remote</div></div>
+          <div className="col-6 col-md-3">
+            <div className="stat-num">{jobs.length}</div>
+            <div className="text-muted small">Open roles</div>
+          </div>
+          <div className="col-6 col-md-3">
+            <div className="stat-num">{companies}</div>
+            <div className="text-muted small">Hiring companies</div>
+          </div>
+          <div className="col-6 col-md-3">
+            <div className="stat-num">{internships}</div>
+            <div className="text-muted small">Internships</div>
+          </div>
+          <div className="col-6 col-md-3">
+            <div className="stat-num">{locationsCount}</div>
+            <div className="text-muted small">Locations & remote</div>
+          </div>
         </div>
       </section>
 
       {/* Benefits */}
       <section className="container py-5 mt-4">
         <h2 className="section-title text-center mb-1">Built for students</h2>
-        <p className="text-muted text-center mb-5">Everything you need to find your first role.</p>
+        <p className="text-muted text-center mb-5">Everything you need to land your first professional role.</p>
         <div className="row g-4">
           {[
-            ["bi-mortarboard", "Made for freshers", "Every listing says who can apply, so you know if a role fits you."],
-            ["bi-funnel", "Find roles faster", "Filter by job type and location to see only what matters to you."],
-            ["bi-list-check", "Clear job details", "See responsibilities, requirements and skills before you decide."],
+            ["bi-mortarboard", "Made for freshers", "Every listing includes eligibility, requirements, and stipends so you know if a role fits you."],
+            ["bi-funnel", "Smart multi-filtering", "Filter by category, job type, and location to find exactly what you're passionate about."],
+            ["bi-card-checklist", "One-click application tracking", "Track your application status (Pending, Accepted, Rejected) in real-time from your dashboard."]
           ].map(([icon, title, text]) => (
             <div className="col-md-4" key={title}>
               <div className="benefit-card h-100">
-                <div className="benefit-icon"><i className={`bi ${icon}`}></i></div>
+                <div className="benefit-icon">
+                  <i className={`bi ${icon}`}></i>
+                </div>
                 <h5 className="fw-bold">{title}</h5>
                 <p className="text-muted mb-0">{text}</p>
               </div>
@@ -106,18 +140,24 @@ export default function Home() {
         <div className="container">
           <div className="d-flex justify-content-between align-items-end mb-4">
             <div>
-              <h2 className="section-title mb-1">Featured jobs</h2>
-              <p className="text-muted mb-0">Hand-picked roles to get you started.</p>
+              <h2 className="section-title mb-1">Featured opportunities</h2>
+              <p className="text-muted mb-0">Hand-picked internships and early-career roles to get you started.</p>
             </div>
-            <Link to="/jobs" className="btn btn-outline-indigo rounded-pill px-4 d-none d-sm-inline-block">View all jobs</Link>
+            <Link to="/jobs" className="btn btn-outline-indigo rounded-pill px-4 d-none d-sm-inline-block">
+              View all jobs
+            </Link>
           </div>
           <div className="row g-4">
             {featured.map((job) => (
-              <div className="col-md-6 col-lg-4" key={job.id}><JobCard job={job} /></div>
+              <div className="col-md-6 col-lg-4" key={job.id}>
+                <JobCard job={job} />
+              </div>
             ))}
           </div>
           <div className="text-center mt-4 d-sm-none">
-            <Link to="/jobs" className="btn btn-outline-indigo rounded-pill px-4">View all jobs</Link>
+            <Link to="/jobs" className="btn btn-outline-indigo rounded-pill px-4">
+              View all jobs
+            </Link>
           </div>
         </div>
       </section>
