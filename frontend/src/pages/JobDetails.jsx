@@ -1,27 +1,30 @@
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import JobCard from "../components/JobCard.jsx";
 import { useJobs } from "../context/JobContext.jsx";
 
 export default function JobDetails() {
   const { id } = useParams();
-  const { jobs, isJobSaved, toggleSaveJob, hasApplied, getApplication, applyToJob, profile } = useJobs();
+  const navigate = useNavigate();
+  const { jobs, isJobSaved, toggleSaveJob, hasApplied, getApplication, applyToJob, profile, isAuthenticated } = useJobs();
 
-  const job = jobs.find((j) => j.id === Number(id));
+  // Find job by either numeric id, legacyId, or MongoDB _id
+  const job = jobs.find((j) => String(j.id) === String(id) || String(j._id) === String(id));
 
   // Application Modal & Form state
   const [showModal, setShowModal] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [formData, setFormData] = useState({
-    applicantName: profile.name || "",
-    email: profile.email || "",
-    phone: profile.phone || "",
-    college: profile.college || "",
-    degree: profile.degree || "",
-    gradYear: profile.gradYear || "2026",
-    resumeLink: profile.portfolio || "https://github.com/" + (profile.name ? profile.name.toLowerCase().replace(/\s+/g, "") : "student"),
-    coverNote: ""
+    applicantName: profile?.name || "",
+    email: profile?.email || "",
+    phone: profile?.phone || "",
+    college: profile?.college || "",
+    degree: profile?.degree || "",
+    gradYear: profile?.gradYear || "2026",
+    resumeLink: profile?.portfolio || "https://github.com/student-demo",
+    coverNote: "",
   });
 
   if (!job) {
@@ -37,21 +40,41 @@ export default function JobDetails() {
     );
   }
 
-  const saved = isJobSaved(job.id);
-  const alreadyApplied = hasApplied(job.id);
-  const existingApp = getApplication(job.id);
-  const similar = jobs.filter((j) => (j.category === job.category || j.type === job.type) && j.id !== job.id).slice(0, 3);
+  const saved = isJobSaved(job.id || job._id);
+  const alreadyApplied = hasApplied(job.id || job._id);
+  const existingApp = getApplication(job.id || job._id);
+  const similar = jobs
+    .filter((j) => (j.category === job.category || j.type === job.type) && String(j.id || j._id) !== String(job.id || job._id))
+    .slice(0, 3);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleApplySubmit = (e) => {
+  const handleApplyClick = () => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+    setFormData({
+      applicantName: profile?.name || "",
+      email: profile?.email || "",
+      phone: profile?.phone || "",
+      college: profile?.college || "",
+      degree: profile?.degree || "",
+      gradYear: profile?.gradYear || "2026",
+      resumeLink: profile?.portfolio || "https://github.com/student-demo",
+      coverNote: "",
+    });
+    setErrorMsg("");
+    setShowModal(true);
+  };
+
+  const handleApplySubmit = async (e) => {
     e.preventDefault();
     setErrorMsg("");
 
-    // Validation
     if (!formData.applicantName.trim()) {
       setErrorMsg("Please enter your full name.");
       return;
@@ -73,15 +96,17 @@ export default function JobDetails() {
       return;
     }
 
-    const result = applyToJob({
-      jobId: job.id,
+    setSubmitting(true);
+    const result = await applyToJob({
+      jobId: job._id || job.id,
       jobTitle: job.title,
       company: job.company,
       category: job.category,
       location: job.location,
       type: job.type,
-      ...formData
+      ...formData,
     });
+    setSubmitting(false);
 
     if (result.success) {
       setFormSubmitted(true);
@@ -96,7 +121,7 @@ export default function JobDetails() {
 
   return (
     <div className="container py-4">
-      {/* Back button & Breadcrumb */}
+      {/* Breadcrumb */}
       <nav aria-label="breadcrumb">
         <ol className="breadcrumb mb-3">
           <li className="breadcrumb-item"><Link to="/" className="text-decoration-none">Home</Link></li>
@@ -144,21 +169,21 @@ export default function JobDetails() {
 
             <h5 className="fw-bold mt-4 mb-2">Key Responsibilities</h5>
             <ul className="text-muted mb-4 ps-3">
-              {job.responsibilities.map((r, i) => (
+              {(job.responsibilities || []).map((r, i) => (
                 <li key={i} className="mb-1">{r}</li>
               ))}
             </ul>
 
             <h5 className="fw-bold mt-4 mb-2">What we are looking for</h5>
             <ul className="text-muted mb-4 ps-3">
-              {job.requirements.map((r, i) => (
+              {(job.requirements || []).map((r, i) => (
                 <li key={i} className="mb-1">{r}</li>
               ))}
             </ul>
 
             <h5 className="fw-bold mt-4 mb-2">Skills & Technologies</h5>
             <div className="d-flex flex-wrap gap-2 mb-4">
-              {job.skills.map((s) => (
+              {(job.skills || []).map((s) => (
                 <span key={s} className="pill pill-indigo">{s}</span>
               ))}
             </div>
@@ -166,7 +191,7 @@ export default function JobDetails() {
             <div className="p-3 bg-light rounded-3 mt-4 border">
               <div className="d-flex align-items-center text-muted small">
                 <i className="bi bi-shield-check text-success fs-5 me-2"></i>
-                <span>Verified student-friendly listing with direct application handling.</span>
+                <span>Verified student-friendly role. Applications persist in MongoDB.</span>
               </div>
             </div>
           </div>
@@ -208,21 +233,7 @@ export default function JobDetails() {
               <button
                 type="button"
                 className="btn btn-indigo w-100 rounded-pill mb-2 py-2"
-                onClick={() => {
-                  // ensure fresh profile values
-                  setFormData({
-                    applicantName: profile.name || "",
-                    email: profile.email || "",
-                    phone: profile.phone || "",
-                    college: profile.college || "",
-                    degree: profile.degree || "",
-                    gradYear: profile.gradYear || "2026",
-                    resumeLink: profile.portfolio || "https://github.com/student-demo",
-                    coverNote: ""
-                  });
-                  setErrorMsg("");
-                  setShowModal(true);
-                }}
+                onClick={handleApplyClick}
               >
                 <i className="bi bi-send-fill me-2"></i>Apply for this role
               </button>
@@ -231,11 +242,17 @@ export default function JobDetails() {
             <button
               type="button"
               className={"btn w-100 rounded-pill py-2 " + (saved ? "btn-indigo-soft" : "btn-outline-indigo")}
-              onClick={() => toggleSaveJob(job.id)}
+              onClick={() => toggleSaveJob(job._id || job.id)}
             >
               <i className={"bi me-2 " + (saved ? "bi-bookmark-check-fill" : "bi-bookmark")}></i>
-              {saved ? "Saved to Bookmarks" : "Save Job"}
+              {saved ? "Saved to MongoDB" : "Save Job"}
             </button>
+
+            {!isAuthenticated && (
+              <div className="alert alert-light border small text-muted mt-3 mb-0">
+                <i className="bi bi-info-circle me-1"></i> Sign in to save or apply to this opportunity.
+              </div>
+            )}
 
             <hr className="my-4" />
 
@@ -269,7 +286,7 @@ export default function JobDetails() {
           </div>
           <div className="row g-4">
             {similar.map((j) => (
-              <div className="col-md-6 col-lg-4" key={j.id}>
+              <div className="col-md-6 col-lg-4" key={j.id || j._id}>
                 <JobCard job={j} />
               </div>
             ))}
@@ -307,7 +324,7 @@ export default function JobDetails() {
                     <i className="bi bi-check-circle-fill text-success display-3 mb-3"></i>
                     <h4 className="fw-bold">Application Submitted Successfully!</h4>
                     <p className="text-muted mb-0">
-                      Your application has been logged with demo status <strong>Pending</strong>. You can monitor it anytime on your Dashboard.
+                      Your application has been stored directly in MongoDB with initial status <strong>Pending</strong>. You can track it on your Dashboard.
                     </p>
                   </div>
                 ) : (
@@ -456,11 +473,16 @@ export default function JobDetails() {
                         type="button"
                         className="btn btn-outline-secondary rounded-pill px-4"
                         onClick={() => setShowModal(false)}
+                        disabled={submitting}
                       >
                         Cancel
                       </button>
-                      <button type="submit" className="btn btn-indigo rounded-pill px-4">
-                        <i className="bi bi-send-fill me-1"></i> Submit Application
+                      <button type="submit" className="btn btn-indigo rounded-pill px-4" disabled={submitting}>
+                        {submitting ? (
+                          <span><span className="spinner-border spinner-border-sm me-2"></span>Submitting...</span>
+                        ) : (
+                          <span><i className="bi bi-send-fill me-1"></i> Submit Application</span>
+                        )}
                       </button>
                     </div>
                   </form>

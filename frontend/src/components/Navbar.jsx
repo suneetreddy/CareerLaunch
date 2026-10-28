@@ -1,12 +1,19 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useJobs } from "../context/JobContext.jsx";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
-  const { savedJobs, applications, profile, notification } = useJobs();
+  const { applications, profile, notification, user, isAuthenticated, isAdmin, logout } = useJobs();
   const close = () => setOpen(false);
+  const navigate = useNavigate();
   const linkClass = ({ isActive }) => "nav-link" + (isActive ? " active" : "");
+
+  const handleLogout = () => {
+    close();
+    logout();
+    navigate("/");
+  };
 
   return (
     <>
@@ -36,32 +43,54 @@ export default function Navbar() {
                   Find Jobs
                 </NavLink>
               </li>
-              <li className="nav-item">
-                <NavLink className={linkClass} to="/dashboard" onClick={close}>
-                  Dashboard
-                  {applications.length > 0 && (
-                    <span className="badge rounded-pill bg-primary ms-1" style={{ fontSize: "0.7rem" }}>
-                      {applications.length}
-                    </span>
-                  )}
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink className={linkClass} to="/profile" onClick={close} title="Edit Student Profile">
-                  <i className="bi bi-person-circle me-1"></i>
-                  {profile.name ? profile.name.split(" ")[0] : "Profile"}
-                </NavLink>
-              </li>
-              <li className="nav-item">
-                <NavLink className={linkClass} to="/login" onClick={close}>
-                  Login
-                </NavLink>
-              </li>
-              <li className="nav-item ms-lg-2 mt-2 mt-lg-0">
-                <Link className="btn btn-indigo rounded-pill px-3 py-1" to="/signup" onClick={close}>
-                  Sign Up
-                </Link>
-              </li>
+
+              {isAuthenticated ? (
+                <>
+                  <li className="nav-item">
+                    <NavLink className={linkClass} to="/dashboard" onClick={close}>
+                      Dashboard
+                      {applications.length > 0 && (
+                        <span className="badge rounded-pill bg-primary ms-1" style={{ fontSize: "0.7rem" }}>
+                          {applications.length}
+                        </span>
+                      )}
+                    </NavLink>
+                  </li>
+                  <li className="nav-item">
+                    <NavLink className={linkClass} to="/profile" onClick={close} title="Edit Student Profile">
+                      <i className="bi bi-person-circle me-1"></i>
+                      {user?.name ? user.name.split(" ")[0] : profile?.name ? profile.name.split(" ")[0] : "Profile"}
+                      {isAdmin && (
+                        <span className="badge bg-danger rounded-pill ms-1" style={{ fontSize: "0.65rem" }}>
+                          Admin
+                        </span>
+                      )}
+                    </NavLink>
+                  </li>
+                  <li className="nav-item ms-lg-2 mt-2 mt-lg-0">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1"
+                      onClick={handleLogout}
+                    >
+                      <i className="bi bi-box-arrow-right me-1"></i> Logout
+                    </button>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li className="nav-item">
+                    <NavLink className={linkClass} to="/login" onClick={close}>
+                      Login
+                    </NavLink>
+                  </li>
+                  <li className="nav-item ms-lg-2 mt-2 mt-lg-0">
+                    <Link className="btn btn-indigo rounded-pill px-3 py-1" to="/signup" onClick={close}>
+                      Sign Up
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>
@@ -76,11 +105,11 @@ export default function Navbar() {
           aria-live="polite"
         >
           <div className={`toast show align-items-center text-white border-0 shadow-lg ${
-            notification.type === "success" ? "bg-success" : "bg-dark"
+            notification.type === "success" ? "bg-success" : notification.type === "danger" ? "bg-danger" : "bg-dark"
           } rounded-3 p-2`}>
             <div className="d-flex align-items-center">
               <div className="toast-body py-1 px-2 d-flex align-items-center">
-                <i className={`bi ${notification.type === "success" ? "bi-check-circle-fill" : "bi-info-circle-fill"} me-2 fs-5`}></i>
+                <i className={`bi ${notification.type === "success" ? "bi-check-circle-fill" : notification.type === "danger" ? "bi-exclamation-octagon-fill" : "bi-info-circle-fill"} me-2 fs-5`}></i>
                 <span>{notification.message}</span>
               </div>
             </div>

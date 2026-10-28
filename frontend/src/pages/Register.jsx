@@ -3,29 +3,46 @@ import { Link, useNavigate } from "react-router-dom";
 import { useJobs } from "../context/JobContext.jsx";
 
 export default function Register() {
-  const { updateProfile, notify } = useJobs();
+  const { register } = useJobs();
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [status, setStatus] = useState(""); // "", "mismatch", "done"
+  const [status, setStatus] = useState(""); // "", "mismatch", "done", "error"
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMsg("");
+
     if (password !== confirm) {
       setStatus("mismatch");
       return;
     }
 
-    updateProfile({ name, email });
-    setStatus("done");
-    notify(`Welcome to CareerLaunch, ${name}!`, "success");
+    if (password.length < 6) {
+      setStatus("error");
+      setErrorMsg("Password must be at least 6 characters.");
+      return;
+    }
 
-    setTimeout(() => {
-      navigate("/dashboard");
-    }, 1200);
+    setLoading(true);
+
+    try {
+      await register(name, email, password);
+      setStatus("done");
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+    } catch (err) {
+      setStatus("error");
+      setErrorMsg(err.message || "Registration failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,17 +57,23 @@ export default function Register() {
           </div>
         )}
 
+        {status === "error" && (
+          <div className="alert alert-danger py-2 small">
+            <i className="bi bi-exclamation-triangle-fill me-1"></i> {errorMsg}
+          </div>
+        )}
+
         {status === "done" ? (
           <div className="alert alert-success py-3">
             <div className="d-flex align-items-center mb-2">
               <i className="bi bi-check-circle-fill fs-5 me-2"></i>
               <strong>Account Registered!</strong>
             </div>
-            <p className="small mb-2">
-              Profile created for <strong>{name}</strong> ({email}). Redirecting to your dashboard...
+            <p className="small mb-1">
+              Account created in MongoDB for <strong>{name}</strong> ({email}).
             </p>
             <div className="text-muted small fst-italic">
-              Note: Account state is safely preserved in browser localStorage for this college project.
+              Redirecting to your Dashboard...
             </div>
           </div>
         ) : (
@@ -104,7 +127,13 @@ export default function Register() {
                 onChange={(e) => setConfirm(e.target.value)}
               />
             </div>
-            <button type="submit" className="btn btn-indigo w-100 rounded-pill py-2">Sign up</button>
+            <button type="submit" className="btn btn-indigo w-100 rounded-pill py-2" disabled={loading}>
+              {loading ? (
+                <span><span className="spinner-border spinner-border-sm me-2"></span>Creating account...</span>
+              ) : (
+                "Sign up"
+              )}
+            </button>
           </form>
         )}
 

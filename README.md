@@ -1,65 +1,59 @@
-# CareerLaunch — Internship and Job Portal
+# CareerLaunch — Internship and Job Portal (Full MERN Stack)
 
-A student-friendly internship and job portal built as a college project using **React + Vite** on the frontend and **Express** on the backend. Designed specifically for college students and freshers seeking internships, full-time trainee positions, and entry-level jobs.
+A complete MERN stack (MongoDB, Express, React, Node.js) internship and job portal built as a college project. Designed for college students and freshers seeking internships, full-time trainee positions, and entry-level jobs with real database persistence, JWT authentication, and role-based access control.
 
 ---
 
-## 🚀 Key Features Implemented
+## 🚀 Key Features Implemented (Phase 3 Full MERN)
 
-### 1. Job & Internship Listings
-- Realistic dataset of internships and early-career roles across engineering, data science, UI/UX design, product management, QA, and marketing.
-- Each listing includes company name, location, job type, monthly stipend or salary, eligibility requirements, responsibilities, and required skills.
+### 1. MongoDB Database Persistence & Schema Design
+- **Users Collection (`users`)**: Stores registered student and administrator accounts with bcrypt hashed passwords and unique indexed emails.
+- **Jobs Collection (`jobs`)**: Stores 12+ verified student jobs with compound indexing on `(title, company)` and category/location/type indexing.
+- **Saved Jobs Collection (`savedjobs`)**: Bookmarks associated with authenticated user ID, enforced with compound unique index `{ user: 1, job: 1 }`.
+- **Applications Collection (`applications`)**: Tracks student applications with resume links, cover notes, and reference IDs. Enforced with compound unique index `{ user: 1, job: 1 }` to prevent duplicate applications at the database level.
+- **Profiles Collection (`profiles`)**: Stores 1-to-1 student profile documents with technical skills, academic history, and contact links.
 
-### 2. Live Search & Multi-Filter System
-- **Keyword Search**: Search dynamically by role title, company name, or tech skills (e.g. *React*, *Figma*, *Python*).
-- **3-Way Filtering**:
-  - **Category**: *Software Development*, *Data & Analytics*, *Design & UI/UX*, *Product & QA*, *Marketing & Content*, *Operations & Support*.
-  - **Job Type**: *Internship*, *Full-time*, *Part-time*.
-  - **Location**: *Bengaluru*, *Hyderabad*, *Pune*, *Chennai*, *Remote*.
-- Results counter with a one-click "Clear all filters" button and empty-state handling.
+### 2. Secure JWT Authentication & Authorization
+- **Stateless JWT**: Standard Bearer token authentication (`Authorization: Bearer <token>`) signed with server-side `JWT_SECRET`.
+- **Private Route Protection**: Authentication middleware (`verifyToken`) verifies tokens and attaches authenticated user identity.
+- **Data Isolation**: Students can strictly access and modify only their own applications, saved bookmarks, and profile details.
+- **User Enumeration Protection**: `GET /api/auth/users` is strictly locked to administrators (`requireAdmin`); unauthorized visitors and students receive `401` / `403`.
+- **Role Elevation Guard**: Public registration strictly enforces `role: "student"` and prevents clients from tampering with role fields.
 
-### 3. Job Details & Application Workflow
-- Comprehensive job breakdown with responsibilities, qualifications, and company overview.
-- **Interactive Application Modal**:
-  - Automatically pre-fills candidate details from the student's profile.
-  - Form validation for candidate name, email, phone number, college, degree, graduation year, and resume/portfolio link.
-  - Initial submission status is automatically logged as **Pending** with a generated application reference number.
-- **Duplicate Prevention**: Intelligently detects previously applied positions and disables re-submission with an "Applied" badge.
+### 3. Role-Based Admin Operations
+- **Administrator Capabilities**:
+  - Review all candidate submissions across the entire portal on the Dashboard.
+  - Update candidate application status (`Pending`, `Accepted`, `Rejected`) via `PATCH /api/applications/:id/status`.
+  - Create, edit, and delete job postings via `POST /api/jobs`, `PUT /api/jobs/:id`, and `DELETE /api/jobs/:id`.
 
-### 4. Bookmark & Saved Jobs
-- Save or unsave any job directly from the `JobCard` or from the `JobDetails` page.
-- View and manage bookmarked jobs under the **Saved Jobs** tab on the Dashboard.
-
-### 5. Application Tracking Dashboard
-- **Key Metrics Overview**:
-  - Total Available Roles
-  - Submitted Applications
-  - Saved Bookmarks
-  - Accepted Offers count
-- **Tracking Table**:
-  - Live status tracking with color-coded badges: **Pending** (amber), **Accepted** (green), **Rejected** (red).
-  - Modal viewer to inspect submitted application details (resume link, cover note, degree, batch).
-  - **Presentation / Viva Mode**: Dynamic status switcher allowing you to toggle application statuses live during project demonstrations to showcase real-time UI updates.
-  - Application withdrawal with confirmation.
-- **Skill-Based Recommendations**: Automatically highlights jobs that match skills listed in your profile.
-
-### 6. Editable Student Profile
-- Manage student details: Full Name, Email, Phone, College/University, Degree, Branch, and Graduation Year.
-- **Interactive Skill Tag Editor**: Add and remove technical/soft skills dynamically.
-- Social links: GitHub, LinkedIn, Portfolio/Resume URL, and a short professional bio.
-
-### 7. Persistent Local Storage
-- All saved bookmarks, submitted applications, and profile edits are saved to browser `localStorage` (`cl_saved_jobs`, `cl_applications`, `cl_profile`).
-- Data persists across browser refreshes and page navigation.
-- Includes a "Reset Demo Data" option on the Dashboard to return to initial showcase state at any time.
+### 4. Interactive Frontend (React + Vite)
+- Real-time job search by keyword, company, and skills.
+- Multi-filter dropdowns for Category, Job Type, and Location.
+- Responsive Student & Admin Dashboard views.
+- Student Profile with interactive skill tag manager.
+- Quick 1-click Demo Logins for Student and Admin roles during college project demonstrations.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 18, Vite, React Router DOM (v6), Bootstrap 5.3, Bootstrap Icons
-- **Backend**: Node.js, Express, CORS, Dotenv
-- **Storage**: Browser `localStorage` (Zero database installation required; no MongoDB Atlas needed)
+- **Backend**: Node.js, Express, Mongoose 9, CORS, Dotenv, Bcryptjs, JSON Web Tokens (jsonwebtoken)
+- **Database**: MongoDB Community Server 9.0 (Local instance on `127.0.0.1:27017`)
+- **Inspection Tool**: MongoDB Compass
+
+---
+
+## 🔑 Pre-Seeded Demo Accounts
+
+The backend automatically seeds these demo accounts on startup (or via `npm run seed`):
+
+| Role | Email | Password | Permissions |
+|---|---|---|---|
+| **Student Demo** | `student@careerlaunch.edu` | `StudentPassword123!` | Apply to jobs, bookmark roles, manage profile |
+| **Admin Demo** | `admin@careerlaunch.edu` | `AdminPassword123!` | View all student submissions, update application status, manage jobs |
+
+*(Quick-login buttons are also available on the Login page for 1-click access during presentations).*
 
 ---
 
@@ -67,15 +61,18 @@ A student-friendly internship and job portal built as a college project using **
 
 ### Prerequisites
 - [Node.js LTS](https://nodejs.org/) installed
-- Visual Studio Code or any code editor
+- MongoDB Community Server running locally on port `27017`
 
-### Step 1: Open the Project
-Open PowerShell and navigate to the project directory:
+### Step 1: Backend Setup & Execution (Terminal 1)
 ```powershell
-cd CareerLaunch
+cd backend
+npm install
+npm run seed     # (Optional: seeds/verifies initial data)
+npm run dev
 ```
+The Express API runs at **`http://localhost:5000`** and connects to `mongodb://127.0.0.1:27017/careerlaunch`.
 
-### Step 2: Run the Frontend (Terminal 1)
+### Step 2: Frontend Setup & Execution (Terminal 2)
 ```powershell
 cd frontend
 npm install
@@ -83,85 +80,75 @@ npm run dev
 ```
 Open **`http://localhost:5173`** in your browser.
 
-### Step 3: Run the Backend (Terminal 2 - Optional)
-```powershell
-cd backend
-npm install
-npm run dev
-```
-The Express API runs at **`http://localhost:5000`**.
+---
 
-### Verify Backend Health & API Endpoints
-Open a PowerShell terminal or browser tab:
+## ⚙️ Environment Variables (`backend/.env`)
+
+Configure `backend/.env` with the following keys:
+```env
+PORT=5000
+FRONTEND_URL=http://localhost:5173
+MONGODB_URI=mongodb://127.0.0.1:27017/careerlaunch
+JWT_SECRET=your_jwt_secret_key_here
+ADMIN_SETUP_KEY=your_admin_secret_key_here
+```
+
+---
+
+## 🔍 Verification & API Endpoints
+
+Test the API endpoints directly in PowerShell:
+
 ```powershell
-# Health Check
+# 1. Health check & live database counts
 Invoke-RestMethod http://localhost:5000/api/health
 
-# Fetch All Jobs
+# 2. Fetch public job listings from MongoDB
 Invoke-RestMethod http://localhost:5000/api/jobs
 
-# Fetch Single Job
-Invoke-RestMethod http://localhost:5000/api/jobs/1
+# 3. Test Student Login (receives JWT token)
+$login = @{ email = "student@careerlaunch.edu"; password = "StudentPassword123!" } | ConvertTo-Json
+$res = Invoke-RestMethod -Uri http://localhost:5000/api/auth/login -Method POST -Body $login -ContentType "application/json"
+$token = $res.token
+
+# 4. Fetch Authenticated Profile from MongoDB
+Invoke-RestMethod -Uri http://localhost:5000/api/profile -Headers @{ Authorization = "Bearer $token" }
+
+# 5. Fetch Authenticated Applications from MongoDB
+Invoke-RestMethod -Uri http://localhost:5000/api/applications -Headers @{ Authorization = "Bearer $token" }
 ```
 
 ---
 
-## 📁 Project Structure
+## 🧭 Viewing Collections in MongoDB Compass
 
-```
-CareerLaunch/
-├── backend/
-│   ├── data/
-│   │   └── jobs.json         # Realistic job listings for Express API
-│   ├── server.js             # Express API server with /api/health & /api/jobs
-│   ├── package.json
-│   └── .env.example
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx    # Responsive header with notification toast & badges
-│   │   │   ├── JobCard.jsx   # Card with bookmark toggle & applied indicator
-│   │   │   └── Footer.jsx    # Footer with quick navigation
-│   │   ├── context/
-│   │   │   └── JobContext.jsx# Centralized state & localStorage persistence
-│   │   ├── data/
-│   │   │   └── jobs.js       # Student job dataset with categories & types
-│   │   ├── pages/
-│   │   │   ├── Home.jsx      # Hero, live search, stats, featured jobs
-│   │   │   ├── Jobs.jsx      # Search and 3-way filtering page
-│   │   │   ├── JobDetails.jsx# Role overview & application modal
-│   │   │   ├── Dashboard.jsx # Applications tracker, metrics, saved jobs
-│   │   │   ├── Profile.jsx   # Student profile & interactive skills editor
-│   │   │   ├── Login.jsx     # Demo login page
-│   │   │   ├── Register.jsx  # Student signup page
-│   │   │   └── NotFound.jsx  # 404 page
-│   │   ├── App.jsx           # Routes and provider setup
-│   │   ├── main.jsx
-│   │   └── index.css         # Bootstrap custom styling & animations
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-└── README.md
-```
+1. Open **MongoDB Compass**.
+2. Connect to the URI: `mongodb://127.0.0.1:27017`.
+3. Select the **`careerlaunch`** database in the left panel.
+4. You will see five active collections:
+   - `users`: Registered users with hashed passwords and assigned roles (`student` / `admin`).
+   - `jobs`: 12 indexed jobs with eligibility, requirements, and salaries.
+   - `savedjobs`: Bookmarked roles linked by student `user` ObjectId.
+   - `applications`: Candidate applications with generated reference IDs and status.
+   - `profiles`: Student bios, contact details, and skill tags.
 
 ---
 
-## 🎓 College Demonstration Guide
+## 🎓 College Demonstration Walkthrough
 
 When presenting this project for evaluation or viva:
 
-1. **Home Page (`/`)**:
-   - Show the hero banner, fast keyword searches (click "React" or "Design"), and platform statistics.
-2. **Find Jobs (`/jobs`)**:
-   - Filter by **Category** (e.g. *Software Development*), **Job Type** (*Internship*), and **Location** (*Bengaluru*).
-   - Show how the results update instantly and how clicking the bookmark icon saves a job.
-3. **Job Details & Application Form (`/jobs/1`)**:
-   - Click a job to view responsibilities and skills.
-   - Click **"Apply for this role"** to open the modal. Show that student profile fields are auto-populated.
-   - Submit the application and demonstrate that duplicate applications are now locked.
-4. **Dashboard (`/dashboard`)**:
-   - Show the 4 metric cards (Available Roles, Applications, Bookmarks, Offers).
-   - In the applications table, demonstrate the **Demo Status Action** dropdown by switching an application from *Pending* to *Accepted* or *Rejected*.
-   - Switch to the **Saved Jobs** tab to view bookmarked opportunities.
-5. **Profile Page (`/profile`)**:
-   - Add a new skill (e.g. *Docker* or *TypeScript*) and update contact info. Click **Save Changes** and refresh the page to prove persistence in `localStorage`.
+1. **Student Login**:
+   - Go to `/login` and click **"Demo Student Account"**.
+   - Show that the student's name, profile, saved jobs, and submitted applications are immediately fetched from MongoDB.
+2. **Apply to a Job & Duplicate Prevention**:
+   - Navigate to `/jobs`, select an open listing, and submit an application.
+   - Show the success confirmation. Attempt to apply again to demonstrate that duplicate submissions are locked by the compound unique index in MongoDB.
+3. **Admin Login & Hiring Decision**:
+   - Log out and log in using **"Demo Administrator Account"**.
+   - Notice the **Admin** badge in the navbar and the **Admin Application Management** banner on `/dashboard`.
+   - In the applications table, switch a candidate's status from *Pending* to *Accepted*.
+   - Refresh the page (or check MongoDB Compass) to demonstrate that the status change persisted in MongoDB.
+4. **Student Profile Update**:
+   - Log back into the student account, navigate to `/profile`, add a new skill tag (e.g. *Docker*), and click **Save Changes**.
+   - Refresh the page to prove that the update persisted in MongoDB.

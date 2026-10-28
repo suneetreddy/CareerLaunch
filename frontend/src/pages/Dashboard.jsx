@@ -9,10 +9,12 @@ export default function Dashboard() {
     savedJobs,
     applications,
     profile,
-    unsaveJob,
+    user,
+    isAuthenticated,
+    isAdmin,
+    loading,
     withdrawApplication,
     updateApplicationStatus,
-    resetDemoData
   } = useJobs();
 
   const [activeTab, setActiveTab] = useState("applications"); // 'applications' | 'saved'
@@ -34,14 +36,16 @@ export default function Dashboard() {
   });
 
   // Filtered saved jobs
-  const savedJobsList = jobs.filter((job) => savedJobs.includes(job.id));
+  const savedJobsList = jobs.filter((job) =>
+    savedJobs.some((id) => String(id) === String(job.id) || String(id) === String(job._id))
+  );
 
   // Recommended jobs based on student profile skills
-  const studentSkills = (profile.skills || []).map((s) => s.toLowerCase());
+  const studentSkills = (profile?.skills || []).map((s) => s.toLowerCase());
   const recommendedJobs = jobs
     .filter((job) => {
-      const matchesSkill = job.skills.some((s) => studentSkills.includes(s.toLowerCase()));
-      const alreadyApplied = applications.some((a) => Number(a.jobId) === Number(job.id));
+      const matchesSkill = (job.skills || []).some((s) => studentSkills.includes(s.toLowerCase()));
+      const alreadyApplied = applications.some((a) => String(a.jobId) === String(job.id));
       return matchesSkill && !alreadyApplied;
     })
     .slice(0, 3);
@@ -57,6 +61,28 @@ export default function Dashboard() {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="benefit-card mx-auto p-5" style={{ maxWidth: "540px" }}>
+          <i className="bi bi-lock-fill display-3 text-indigo mb-3"></i>
+          <h2 className="fw-bold mb-2">Sign in to Access Dashboard</h2>
+          <p className="text-muted mb-4">
+            Sign in to your CareerLaunch account to view submitted applications, bookmarked roles, and personalized recommendations stored in MongoDB.
+          </p>
+          <div className="d-flex justify-content-center gap-2">
+            <Link to="/login" className="btn btn-indigo rounded-pill px-4">
+              <i className="bi bi-box-arrow-in-right me-1"></i> Log In
+            </Link>
+            <Link to="/signup" className="btn btn-outline-indigo rounded-pill px-4">
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* Header */}
@@ -64,17 +90,29 @@ export default function Dashboard() {
         <div className="container">
           <div className="d-flex flex-wrap justify-content-between align-items-center gap-3">
             <div>
-              <h1 className="fw-bold mb-1">Student Dashboard</h1>
+              <div className="d-flex align-items-center gap-2 mb-1">
+                <h1 className="fw-bold mb-0">
+                  {isAdmin ? "Admin Application Management" : "Student Dashboard"}
+                </h1>
+                {isAdmin ? (
+                  <span className="badge bg-danger rounded-pill px-3 py-1">Administrator</span>
+                ) : (
+                  <span className="badge bg-indigo-subtle text-indigo rounded-pill px-3 py-1">Student</span>
+                )}
+              </div>
               <p className="hero-text mb-0">
-                Welcome back, <span className="text-white fw-semibold">{profile.name || "Student"}</span>! Track your progress and opportunities.
+                Welcome, <span className="text-white fw-semibold">{user?.name || profile?.name || "User"}</span>!{" "}
+                {isAdmin
+                  ? "Manage candidate submissions and update statuses across the portal."
+                  : "Track your real-time application decisions and saved opportunities in MongoDB."}
               </p>
             </div>
             <div className="d-flex gap-2">
               <Link to="/profile" className="btn btn-light rounded-pill px-3">
-                <i className="bi bi-person-circle me-1"></i> Edit Profile
+                <i className="bi bi-person-circle me-1"></i> Profile
               </Link>
               <Link to="/jobs" className="btn btn-outline-light rounded-pill px-3">
-                <i className="bi bi-search me-1"></i> Find Jobs
+                <i className="bi bi-search me-1"></i> Browse Jobs
               </Link>
             </div>
           </div>
@@ -82,6 +120,15 @@ export default function Dashboard() {
       </section>
 
       <div className="container py-4">
+        {isAdmin && (
+          <div className="alert alert-warning border-warning-subtle shadow-sm mb-4 rounded-3 d-flex align-items-center">
+            <i className="bi bi-shield-lock-fill fs-4 text-warning-emphasis me-3"></i>
+            <div>
+              <strong>Admin Mode Active:</strong> You are authorized to review all applicant submissions across all jobs and update hiring statuses directly in MongoDB.
+            </div>
+          </div>
+        )}
+
         {/* Metric Cards */}
         <div className="row g-3 mb-4">
           <div className="col-6 col-lg-3">
@@ -100,7 +147,9 @@ export default function Dashboard() {
                 <i className="bi bi-send-check"></i>
               </div>
               <div className="stat-num fs-3">{totalApplicationsCount}</div>
-              <div className="text-muted small">Submitted Applications</div>
+              <div className="text-muted small">
+                {isAdmin ? "Total Submissions (All)" : "My Applications"}
+              </div>
             </div>
           </div>
 
@@ -133,7 +182,8 @@ export default function Dashboard() {
                 className={`btn rounded-pill px-4 ${activeTab === "applications" ? "btn-indigo" : "btn-light text-dark"}`}
                 onClick={() => setActiveTab("applications")}
               >
-                <i className="bi bi-file-earmark-text me-2"></i>My Applications ({totalApplicationsCount})
+                <i className="bi bi-file-earmark-text me-2"></i>
+                {isAdmin ? "All Applications" : "My Applications"} ({totalApplicationsCount})
               </button>
             </li>
             <li className="nav-item">
@@ -146,187 +196,189 @@ export default function Dashboard() {
             </li>
           </ul>
 
-          <div className="d-flex align-items-center gap-2">
-            <button
-              type="button"
-              className="btn btn-sm btn-outline-secondary rounded-pill"
-              onClick={resetDemoData}
-              title="Reset all demo data back to factory state"
-            >
-              <i className="bi bi-arrow-counterclockwise me-1"></i>Reset Demo Data
-            </button>
+          <div className="small text-muted">
+            <i className="bi bi-database-check text-success me-1"></i> Data synced with MongoDB
           </div>
         </div>
 
-        {/* TAB 1: Applications */}
-        {activeTab === "applications" && (
-          <div>
-            {/* Filter by Status */}
-            <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-              <div className="d-flex align-items-center gap-2">
-                <span className="small text-muted fw-semibold">Filter Status:</span>
-                {["All", "Pending", "Accepted", "Rejected"].map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={`btn btn-sm rounded-pill px-3 ${
-                      statusFilter === s ? "btn-outline-indigo active" : "btn-light border"
-                    }`}
-                    onClick={() => setStatusFilter(s)}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-
-              <div className="small text-muted">
-                Showing {filteredApps.length} of {applications.length} applications
-              </div>
-            </div>
-
-            {filteredApps.length > 0 ? (
-              <div className="card border rounded-4 shadow-sm overflow-hidden mb-4">
-                <div className="table-responsive">
-                  <table className="table align-middle table-hover mb-0">
-                    <thead className="table-light small text-uppercase text-secondary">
-                      <tr>
-                        <th className="ps-4">Job Role & Company</th>
-                        <th>Type & Location</th>
-                        <th>Applied Date</th>
-                        <th>Tracking Status</th>
-                        <th>Demo Status Action</th>
-                        <th className="pe-4 text-end">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredApps.map((app) => (
-                        <tr key={app.id}>
-                          <td className="ps-4">
-                            <div className="fw-bold text-dark">{app.jobTitle}</div>
-                            <div className="text-muted small">
-                              <i className="bi bi-building me-1"></i>{app.company}
-                              <span className="ms-2 badge bg-light text-secondary border">Ref: {app.id}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div><span className="pill pill-indigo py-0 px-2 small">{app.type}</span></div>
-                            <small className="text-muted"><i className="bi bi-geo-alt me-1"></i>{app.location}</small>
-                          </td>
-                          <td>
-                            <div className="small text-dark fw-medium">{app.appliedAt}</div>
-                          </td>
-                          <td>
-                            {getStatusBadge(app.status)}
-                          </td>
-                          <td>
-                            {/* Demo dropdown to change status for live college demonstration */}
-                            <select
-                              className="form-select form-select-sm rounded-pill"
-                              style={{ width: "130px", fontSize: "0.8rem" }}
-                              value={app.status}
-                              onChange={(e) => updateApplicationStatus(app.id, e.target.value)}
-                              title="College demo: quickly switch application status to test visual feedback"
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="Accepted">Accepted</option>
-                              <option value="Rejected">Rejected</option>
-                            </select>
-                          </td>
-                          <td className="pe-4 text-end">
-                            <div className="btn-group btn-group-sm">
-                              <button
-                                type="button"
-                                className="btn btn-outline-secondary rounded-pill me-1"
-                                onClick={() => setSelectedApp(app)}
-                                title="View Application Details"
-                              >
-                                <i className="bi bi-eye"></i> Details
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-outline-danger rounded-pill"
-                                onClick={() => {
-                                  if (window.confirm(`Withdraw application for ${app.jobTitle}?`)) {
-                                    withdrawApplication(app.id);
-                                  }
-                                }}
-                                title="Withdraw application"
-                              >
-                                <i className="bi bi-trash"></i>
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ) : (
-              <div className="empty-box text-center bg-white p-5 my-3">
-                <i className="bi bi-inbox display-4 text-muted"></i>
-                <h5 className="mt-3 fw-bold">No applications found</h5>
-                <p className="text-muted mx-auto" style={{ maxWidth: "400px" }}>
-                  {statusFilter === "All"
-                    ? "You haven't submitted any job applications yet. Browse our open listings to apply!"
-                    : `No applications currently marked with status "${statusFilter}".`}
-                </p>
-                <Link to="/jobs" className="btn btn-indigo rounded-pill px-4 mt-2">
-                  <i className="bi bi-search me-1"></i> Browse Open Jobs
-                </Link>
-              </div>
-            )}
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status"></div>
+            <p className="mt-2 text-muted">Loading data from MongoDB...</p>
           </div>
-        )}
-
-        {/* TAB 2: Saved Jobs */}
-        {activeTab === "saved" && (
-          <div>
-            {savedJobsList.length > 0 ? (
-              <div className="row g-4">
-                {savedJobsList.map((job) => (
-                  <div className="col-md-6 col-lg-4" key={job.id}>
-                    <JobCard job={job} />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="empty-box text-center bg-white p-5 my-3">
-                <i className="bi bi-bookmark display-4 text-muted"></i>
-                <h5 className="mt-3 fw-bold">No saved jobs yet</h5>
-                <p className="text-muted mx-auto" style={{ maxWidth: "420px" }}>
-                  Keep track of interesting internships and jobs by clicking the bookmark icon on any job card.
-                </p>
-                <Link to="/jobs" className="btn btn-indigo rounded-pill px-4 mt-2">
-                  <i className="bi bi-search me-1"></i> Explore Jobs
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Recommended Jobs Section */}
-        {recommendedJobs.length > 0 && (
-          <div className="mt-5 pt-3">
-            <div className="d-flex justify-content-between align-items-end mb-3">
+        ) : (
+          <>
+            {/* TAB 1: Applications */}
+            {activeTab === "applications" && (
               <div>
-                <h4 className="fw-bold mb-1">Recommended for You</h4>
-                <p className="text-muted small mb-0">
-                  Matches your profile skills: {profile.skills.slice(0, 4).join(", ")}
-                </p>
-              </div>
-              <Link to="/jobs" className="btn btn-outline-indigo btn-sm rounded-pill px-3">
-                View all
-              </Link>
-            </div>
-            <div className="row g-4">
-              {recommendedJobs.map((job) => (
-                <div className="col-md-6 col-lg-4" key={job.id}>
-                  <JobCard job={job} />
+                {/* Filter by Status */}
+                <div className="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                  <div className="d-flex align-items-center gap-2">
+                    <span className="small text-muted fw-semibold">Filter Status:</span>
+                    {["All", "Pending", "Accepted", "Rejected"].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`btn btn-sm rounded-pill px-3 ${
+                          statusFilter === s ? "btn-outline-indigo active" : "btn-light border"
+                        }`}
+                        onClick={() => setStatusFilter(s)}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="small text-muted">
+                    Showing {filteredApps.length} of {applications.length} applications
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
+
+                {filteredApps.length > 0 ? (
+                  <div className="card border rounded-4 shadow-sm overflow-hidden mb-4">
+                    <div className="table-responsive">
+                      <table className="table align-middle table-hover mb-0">
+                        <thead className="table-light small text-uppercase text-secondary">
+                          <tr>
+                            <th className="ps-4">Job Role & Company</th>
+                            <th>Applicant</th>
+                            <th>Applied Date</th>
+                            <th>Status</th>
+                            {isAdmin && <th>Admin Status Action</th>}
+                            <th className="pe-4 text-end">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredApps.map((app) => (
+                            <tr key={app.id || app._id}>
+                              <td className="ps-4">
+                                <div className="fw-bold text-dark">{app.jobTitle}</div>
+                                <div className="text-muted small">
+                                  <i className="bi bi-building me-1"></i>{app.company}
+                                  <span className="ms-2 badge bg-light text-secondary border">Ref: {app.id}</span>
+                                </div>
+                              </td>
+                              <td>
+                                <div className="fw-semibold small">{app.applicantName}</div>
+                                <small className="text-muted">{app.email}</small>
+                              </td>
+                              <td>
+                                <div className="small text-dark fw-medium">{app.appliedAt}</div>
+                              </td>
+                              <td>{getStatusBadge(app.status)}</td>
+                              {isAdmin && (
+                                <td>
+                                  {/* Admin dropdown directly updates status in MongoDB */}
+                                  <select
+                                    className="form-select form-select-sm rounded-pill"
+                                    style={{ width: "130px", fontSize: "0.8rem" }}
+                                    value={app.status}
+                                    onChange={(e) => updateApplicationStatus(app._id || app.id, e.target.value)}
+                                    title="Administrator: change status directly in MongoDB"
+                                  >
+                                    <option value="Pending">Pending</option>
+                                    <option value="Accepted">Accepted</option>
+                                    <option value="Rejected">Rejected</option>
+                                  </select>
+                                </td>
+                              )}
+                              <td className="pe-4 text-end">
+                                <div className="btn-group btn-group-sm">
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-secondary rounded-pill me-1"
+                                    onClick={() => setSelectedApp(app)}
+                                    title="View Application Details"
+                                  >
+                                    <i className="bi bi-eye"></i> Details
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-outline-danger rounded-pill"
+                                    onClick={() => {
+                                      if (window.confirm(`Withdraw application for ${app.jobTitle}?`)) {
+                                        withdrawApplication(app._id || app.id);
+                                      }
+                                    }}
+                                    title="Withdraw application"
+                                  >
+                                    <i className="bi bi-trash"></i>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="empty-box text-center bg-white p-5 my-3">
+                    <i className="bi bi-inbox display-4 text-muted"></i>
+                    <h5 className="mt-3 fw-bold">No applications found</h5>
+                    <p className="text-muted mx-auto" style={{ maxWidth: "400px" }}>
+                      {statusFilter === "All"
+                        ? "No applications recorded in MongoDB yet. Explore jobs to submit an application!"
+                        : `No applications currently marked with status "${statusFilter}".`}
+                    </p>
+                    <Link to="/jobs" className="btn btn-indigo rounded-pill px-4 mt-2">
+                      <i className="bi bi-search me-1"></i> Browse Open Jobs
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: Saved Jobs */}
+            {activeTab === "saved" && (
+              <div>
+                {savedJobsList.length > 0 ? (
+                  <div className="row g-4">
+                    {savedJobsList.map((job) => (
+                      <div className="col-md-6 col-lg-4" key={job.id || job._id}>
+                        <JobCard job={job} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="empty-box text-center bg-white p-5 my-3">
+                    <i className="bi bi-bookmark display-4 text-muted"></i>
+                    <h5 className="mt-3 fw-bold">No saved jobs in MongoDB</h5>
+                    <p className="text-muted mx-auto" style={{ maxWidth: "420px" }}>
+                      Bookmarks are stored directly in your MongoDB account. Click the bookmark icon on any job card to save it.
+                    </p>
+                    <Link to="/jobs" className="btn btn-indigo rounded-pill px-4 mt-2">
+                      <i className="bi bi-search me-1"></i> Explore Jobs
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Recommended Jobs Section */}
+            {recommendedJobs.length > 0 && !isAdmin && (
+              <div className="mt-5 pt-3">
+                <div className="d-flex justify-content-between align-items-end mb-3">
+                  <div>
+                    <h4 className="fw-bold mb-1">Recommended for You</h4>
+                    <p className="text-muted small mb-0">
+                      Matches skills in your MongoDB profile: {(profile?.skills || []).slice(0, 4).join(", ")}
+                    </p>
+                  </div>
+                  <Link to="/jobs" className="btn btn-outline-indigo btn-sm rounded-pill px-3">
+                    View all
+                  </Link>
+                </div>
+                <div className="row g-4">
+                  {recommendedJobs.map((job) => (
+                    <div className="col-md-6 col-lg-4" key={job.id || job._id}>
+                      <JobCard job={job} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

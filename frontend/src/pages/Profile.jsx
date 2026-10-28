@@ -1,27 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useJobs } from "../context/JobContext.jsx";
 
 export default function Profile() {
-  const { profile, updateProfile, applications, savedJobs } = useJobs();
+  const { profile, updateProfile, applications, savedJobs, isAuthenticated } = useJobs();
 
   const [formData, setFormData] = useState({
-    name: profile.name || "",
-    email: profile.email || "",
-    phone: profile.phone || "",
-    college: profile.college || "",
-    degree: profile.degree || "",
-    gradYear: profile.gradYear || "2026",
-    location: profile.location || "Bengaluru, India",
-    bio: profile.bio || "",
-    skills: profile.skills || ["React", "JavaScript", "Python"],
-    github: profile.github || "",
-    linkedin: profile.linkedin || "",
-    portfolio: profile.portfolio || ""
+    name: profile?.name || "",
+    email: profile?.email || "",
+    phone: profile?.phone || "",
+    college: profile?.college || "",
+    degree: profile?.degree || "",
+    gradYear: profile?.gradYear || "2026",
+    location: profile?.location || "Bengaluru, India",
+    bio: profile?.bio || "",
+    skills: profile?.skills || ["React", "JavaScript", "Python"],
+    github: profile?.github || "",
+    linkedin: profile?.linkedin || "",
+    portfolio: profile?.portfolio || "",
   });
 
   const [newSkill, setNewSkill] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        email: profile.email || "",
+        phone: profile.phone || "",
+        college: profile.college || "",
+        degree: profile.degree || "",
+        gradYear: profile.gradYear || "2026",
+        location: profile.location || "Bengaluru, India",
+        bio: profile.bio || "",
+        skills: profile.skills && profile.skills.length > 0 ? profile.skills : ["React", "JavaScript", "Python"],
+        github: profile.github || "",
+        linkedin: profile.linkedin || "",
+        portfolio: profile.portfolio || "",
+      });
+    }
+  }, [profile]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,7 +54,7 @@ export default function Profile() {
     if (skillTrimmed && !formData.skills.some((s) => s.toLowerCase() === skillTrimmed.toLowerCase())) {
       setFormData((prev) => ({
         ...prev,
-        skills: [...prev.skills, skillTrimmed]
+        skills: [...prev.skills, skillTrimmed],
       }));
       setNewSkill("");
     }
@@ -43,16 +63,40 @@ export default function Profile() {
   const handleRemoveSkill = (skillToRemove) => {
     setFormData((prev) => ({
       ...prev,
-      skills: prev.skills.filter((s) => s !== skillToRemove)
+      skills: prev.skills.filter((s) => s !== skillToRemove),
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    updateProfile(formData);
-    setSuccessMsg("Profile details saved successfully in local storage!");
+    setSaving(true);
+    await updateProfile(formData);
+    setSaving(false);
+    setSuccessMsg("Profile details saved successfully in MongoDB!");
     setTimeout(() => setSuccessMsg(""), 4000);
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container py-5 text-center">
+        <div className="benefit-card mx-auto p-5" style={{ maxWidth: "540px" }}>
+          <i className="bi bi-person-x display-3 text-indigo mb-3"></i>
+          <h2 className="fw-bold mb-2">Sign in to View Profile</h2>
+          <p className="text-muted mb-4">
+            Sign in to manage your student profile, skills, and academic background stored in MongoDB.
+          </p>
+          <div className="d-flex justify-content-center gap-2">
+            <Link to="/login" className="btn btn-indigo rounded-pill px-4">
+              <i className="bi bi-box-arrow-in-right me-1"></i> Log In
+            </Link>
+            <Link to="/signup" className="btn btn-outline-indigo rounded-pill px-4">
+              Sign Up
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -88,7 +132,7 @@ export default function Profile() {
                   background: "linear-gradient(135deg, var(--navy), var(--indigo))",
                   fontSize: "1.8rem",
                   width: "72px",
-                  height: "72px"
+                  height: "72px",
                 }}
               >
                 {(formData.name || "S").charAt(0).toUpperCase()}
@@ -138,9 +182,9 @@ export default function Profile() {
 
             <div className="card p-3 rounded-4 border-0 bg-light shadow-sm">
               <div className="d-flex align-items-center">
-                <i className="bi bi-info-circle-fill text-primary fs-4 me-2"></i>
+                <i className="bi bi-database-check text-primary fs-4 me-2"></i>
                 <div className="small text-muted">
-                  Your profile information automatically pre-fills job and internship application forms to save you time.
+                  Your profile details are stored securely in MongoDB and automatically pre-fill internship application forms.
                 </div>
               </div>
             </div>
@@ -174,9 +218,9 @@ export default function Profile() {
                       name="email"
                       type="email"
                       className="form-control"
-                      required
+                      disabled
                       value={formData.email}
-                      onChange={handleChange}
+                      title="Email is bound to your account credentials"
                     />
                   </div>
 
@@ -358,8 +402,12 @@ export default function Profile() {
                   <Link to="/dashboard" className="btn btn-outline-secondary rounded-pill px-4">
                     Cancel
                   </Link>
-                  <button type="submit" className="btn btn-indigo rounded-pill px-5">
-                    <i className="bi bi-save2 me-1"></i> Save Changes
+                  <button type="submit" className="btn btn-indigo rounded-pill px-5" disabled={saving}>
+                    {saving ? (
+                      <span><span className="spinner-border spinner-border-sm me-2"></span>Saving to MongoDB...</span>
+                    ) : (
+                      <span><i className="bi bi-save2 me-1"></i> Save Changes</span>
+                    )}
                   </button>
                 </div>
               </form>
